@@ -1,7 +1,9 @@
 ﻿using System.Diagnostics.Metrics;
 using System.Text.Json;
+using HueApi.Models;
 using HueApi.Models.Sensors;
 using HueSensorExporter.service.Models;
+using Light = HueApi.Models.Light;
 
 namespace HueSensorExporter.service.Services
 {
@@ -11,6 +13,8 @@ namespace HueSensorExporter.service.Services
         private readonly HueManagementService _managementService;
         private readonly Meter _meter;
         private readonly Gauge<double> _temperatureGauge;
+        private readonly Gauge<double> _lightlevelGauge;
+        private readonly Gauge<double> _lampDimmingGauge;
 
         public HueMetricService(HueManagementService managementService)
         {
@@ -19,6 +23,12 @@ namespace HueSensorExporter.service.Services
 
             _temperatureGauge = new Gauge<double>(_meter, "hue_sensor_temperature", "celsius",
                 "Temperatures recorded by the Philips Hue Sensors");
+
+            _lightlevelGauge = new Gauge<double>(_meter, "hue_sensor_lightlevel", "lux",
+                "Lightlevel recorded by the Philips Hue Sensors");
+
+            _lampDimmingGauge = new Gauge<double>(_meter, "hue_lamp_brightness", "percentage",
+                "Brightnes of a Lamp");
         }
 
 
@@ -30,6 +40,25 @@ namespace HueSensorExporter.service.Services
                 var sensorname = _managementService.SensorMapping[resource.Owner.Rid];
                 _temperatureGauge.Set(temperatureValue.Temperature, new KeyValuePair<string, object?>("sensor", sensorname));
 
+            }
+        }
+
+        public void SetLightLevel(List<LightLevel> lightLevelData)
+        {
+            foreach (var level in lightLevelData)
+            {
+                var sensorname = _managementService.SensorMapping[level.Owner.Rid];
+                _lightlevelGauge.Set(level.Light.LuxLevel, new KeyValuePair<string, object?>("sensor", sensorname));
+            }
+        }
+
+        public void SetLightState(List<Light> lightsData)
+        {
+            foreach (var light in lightsData)
+            {
+                var roomName = _managementService.RoomMapping[light.Owner.Rid].DisplayName;
+                if (light.Dimming is null) continue;
+                _lampDimmingGauge.Set(light.On.IsOn ? light.Dimming.Brightness : 0, new KeyValuePair<string, object?>("room", roomName), new KeyValuePair<string, object?>("lamp", light.Metadata.Name));
             }
         }
     }

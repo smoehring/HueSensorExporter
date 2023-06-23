@@ -1,3 +1,5 @@
+using HueApi.Models;
+using HueApi.Models.Sensors;
 using HueSensorExporter.service.Services;
 
 namespace HueSensorExporter.service
@@ -35,6 +37,25 @@ namespace HueSensorExporter.service
         }
 
         private async Task FetchData()
+        {
+            await FetchTemperature();
+            await FetchLightlevel();
+            await FetchLightState();
+        }
+
+        private async Task FetchLightState()
+        {
+            var lights = await _hueApi.GetLightsAsync();
+            _metricService.SetLightState(lights.Data);
+        }
+
+        private async Task FetchLightlevel()
+        {
+            var lightLevel = await _hueApi.GetLightLevelsAsync();
+            _metricService.SetLightLevel(lightLevel.Data);
+        }
+
+        private async Task FetchTemperature()
         {
             var temperatures = await _hueApi.GetTemperaturesAsync();
             _metricService.SetTemperature(temperatures.Data);
