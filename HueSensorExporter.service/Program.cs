@@ -3,6 +3,7 @@ using HueSensorExporter.service.Services;
 using Microsoft.AspNetCore.Builder;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
+using Serilog;
 
 namespace HueSensorExporter.service
 {
@@ -11,6 +12,10 @@ namespace HueSensorExporter.service
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+            builder.Host.UseSerilog((context, services, logger) =>
+            {
+                logger.ReadFrom.Services(services).ReadFrom.Configuration(context.Configuration);
+            });
 
             builder.Services.Configure<HueApiOptions>(builder.Configuration.GetSection(HueApiOptions.ConfigSection));
             builder.Services.AddSingleton<LocalHueApiService>();
@@ -27,7 +32,7 @@ namespace HueSensorExporter.service
 
             var app = builder.Build();
 
-            app.UseOpenTelemetryPrometheusScrapingEndpoint();
+            app.MapPrometheusScrapingEndpoint();
 
             app.Run();
         }
